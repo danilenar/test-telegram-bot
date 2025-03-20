@@ -16,21 +16,83 @@ const bot = new Telegraf(BOT_TOKEN);
 interface UserSession {
   awaitingPhoto: boolean;
   lastCommand?: string;
+  awaitingWallet?: boolean;
 }
 
 // User sessions to track state
 const userSessions: Record<number, UserSession> = {};
 
-// Start command: Greets the user
+// In-memory "database" for user registrations
+interface UserRegistration {
+  telegramId: number;
+  walletAddress: string;
+  registrationDate: Date;
+}
+
+const userRegistrations: UserRegistration[] = [];
+
+// Function to check if a user is registered
+function isUserRegistered(telegramId: number): boolean {
+  return userRegistrations.some((user) => user.telegramId === telegramId);
+}
+
+// Function to register a user
+function registerUser(telegramId: number, walletAddress: string): void {
+  // Check if user already exists
+  const existingUserIndex = userRegistrations.findIndex(
+    (user) => user.telegramId === telegramId
+  );
+
+  if (existingUserIndex >= 0) {
+    // Update existing registration
+    userRegistrations[existingUserIndex].walletAddress = walletAddress;
+  } else {
+    // Create new registration
+    userRegistrations.push({
+      telegramId,
+      walletAddress,
+      registrationDate: new Date(),
+    });
+  }
+}
+
+// Function to validate Zetachain wallet address
+function isValidWalletAddress(address: string): boolean {
+  // Basic validation: starts with 0x and has 42 characters (typical for Ethereum-compatible addresses)
+  return address.startsWith("0x") && address.length === 42;
+}
+
+// Start command: Checks if user is registered, if not, starts registration process
 bot.start((ctx) => {
-  ctx.reply("Welcome to Calories.fun! Type /help to see available commands.");
+  const userId = ctx.from?.id;
+  if (!userId) {
+    return ctx.reply("Sorry, couldn't identify your user account.");
+  }
+
+  if (isUserRegistered(userId)) {
+    // User is already registered
+    ctx.reply(
+      "Welcome back to Calories.fun! Type /help to see available commands."
+    );
+  } else {
+    // User is not registered, start registration process
+    userSessions[userId] = {
+      ...(userSessions[userId] || {}),
+      awaitingWallet: true,
+      lastCommand: "start",
+    };
+
+    ctx.reply(
+      "Welcome to Calories.fun! To get started, please provide your Zetachain wallet address (starting with 0x):"
+    );
+  }
 });
 
 // Help command: Lists available commands
 bot.help((ctx) => {
   ctx.reply(
     "Available commands:\n" +
-      "/start - Start the bot\n" +
+      "/start - Start the bot and register\n" +
       "/help - Show this help message\n" +
       "/wallet - Link your wallet\n" +
       "/submit - Submit a meal photo\n" +
@@ -40,7 +102,18 @@ bot.help((ctx) => {
 
 // Wallet command: Initiates wallet linking process
 bot.command("wallet", async (ctx) => {
-  ctx.reply("Please provide your wallet address (e.g., starting with 0x):");
+  const userId = ctx.from?.id;
+  if (!userId) {
+    return ctx.reply("Sorry, couldn't identify your user account.");
+  }
+
+  userSessions[userId] = {
+    ...(userSessions[userId] || {}),
+    awaitingWallet: true,
+    lastCommand: "wallet",
+  };
+
+  ctx.reply("Please provide your Zetachain wallet address (starting with 0x):");
 });
 
 // Updated submit command with session tracking
@@ -51,8 +124,16 @@ bot.command("submit", async (ctx) => {
       return ctx.reply("Sorry, couldn't identify your user account.");
     }
 
+    // Check if user is registered
+    if (!isUserRegistered(userId)) {
+      return ctx.reply(
+        "You need to register first. Please use /start command."
+      );
+    }
+
     // Set user state to awaiting photo
     userSessions[userId] = {
+      ...(userSessions[userId] || {}),
       awaitingPhoto: true,
       lastCommand: "submit",
     };
@@ -74,18 +155,54 @@ bot.command("submit", async (ctx) => {
 // Referral command: Generates a referral link based on the user's Telegram ID
 bot.command("referral", async (ctx) => {
   const userId = ctx.from?.id;
+  if (!userId) {
+    return ctx.reply("Sorry, couldn't identify your user account.");
+  }
+
+  // Check if user is registered
+  if (!isUserRegistered(userId)) {
+    return ctx.reply("You need to register first. Please use /start command.");
+  }
+
   const referralLink = `https://t.me/your_bot_username?start=${userId}`;
   ctx.reply(`Share this referral link with your friends: ${referralLink}`);
 });
 
-// Listen for text messages (used here to simulate wallet address linking)
+// Listen for text messages (used for wallet address registration/linking)
 bot.on(message("text"), async (ctx) => {
+  const userId = ctx.from?.id;
+  if (!userId) {
+    return ctx.reply("Sorry, couldn't identify your user account.");
+  }
+
   const text = ctx.message.text;
-  // Simple check: if text starts with "0x" and has the length of a typical Ethereum address (42 characters)
-  if (text.startsWith("0x") && text.length === 42) {
-    // Here you would implement the actual wallet linking logic
-    ctx.reply(`Wallet address ${text} linked successfully!`);
+  const session = userSessions[userId] || {};
+
+  // Check if the user is in the process of providing a wallet address
+  if (session.awaitingWallet) {
+    // Validate wallet address
+    if (isValidWalletAddress(text)) {
+      // Register the user
+      registerUser(userId, text);
+
+      // Clear the awaiting wallet state
+      userSessions[userId] = {
+        ...session,
+        awaitingWallet: false,
+      };
+
+      // Send confirmation
+      ctx.reply(
+        `Successfully registered with wallet address ${text}. Welcome to Calories.fun! Type /help to see available commands.`
+      );
+    } else {
+      // Invalid wallet address format
+      ctx.reply(
+        "Invalid wallet address format. Please provide a valid Zetachain wallet address starting with 0x and containing 42 characters."
+      );
+    }
   } else {
+    // Default response for text messages
     ctx.reply(`You said: ${text}`);
   }
 });
