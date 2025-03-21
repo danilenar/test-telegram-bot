@@ -77,7 +77,7 @@ bot.start((ctx) => {
   } else {
     // User is not registered, start registration process
     userSessions[userId] = {
-      ...(userSessions[userId] || {}),
+      awaitingPhoto: false,
       awaitingWallet: true,
       lastCommand: "start",
     };
@@ -108,7 +108,7 @@ bot.command("wallet", async (ctx) => {
   }
 
   userSessions[userId] = {
-    ...(userSessions[userId] || {}),
+    awaitingPhoto: false,
     awaitingWallet: true,
     lastCommand: "wallet",
   };
@@ -176,18 +176,19 @@ bot.on(message("text"), async (ctx) => {
   }
 
   const text = ctx.message.text;
-  const session = userSessions[userId] || {};
+  const session = userSessions[userId] || { awaitingPhoto: false };
 
   // Check if the user is in the process of providing a wallet address
-  if (session.awaitingWallet) {
+  if (session.awaitingWallet === true) {
     // Validate wallet address
     if (isValidWalletAddress(text)) {
       // Register the user
       registerUser(userId, text);
 
-      // Clear the awaiting wallet state
+      // Clear the awaiting wallet state but keep the required fields
       userSessions[userId] = {
         ...session,
+        awaitingPhoto: false,
         awaitingWallet: false,
       };
 
