@@ -10,6 +10,8 @@
     "typescript": "^5.8.2"
   },
   "scripts": {
-    "dev": "ts-node-dev bot.ts"
+    "dev": "ts-node-dev bot.ts",
+    "build": "tsc",
+    "start": "node dist/bot.js"
   }
 }
