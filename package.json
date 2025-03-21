@@ -11,7 +11,7 @@
   },
   "scripts": {
     "dev": "ts-node-dev bot.ts",
-    "build": "tsc",
+    "build": "tsc bot.ts --outDir dist",
     "start": "node dist/bot.js"
   }
 }
