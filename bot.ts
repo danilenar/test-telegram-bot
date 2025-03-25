@@ -213,7 +213,7 @@ bot.on(message("photo"), async (ctx) => {
   // Check if the message contains a photo
   if ("photo" in ctx.message) {
     try {
-      const userId = ctx.from?.id;
+      /* const userId = ctx.from?.id;
       if (!userId) {
         return ctx.reply("Sorry, couldn't identify your user account.");
       }
@@ -251,6 +251,35 @@ bot.on(message("photo"), async (ctx) => {
       // Send the result after "analysis"
       ctx.reply(
         `Our AI estimates that your meal has about ${calorieCount} calories. Tokens will be rewarded accordingly!`
+      ); */
+      const userId = ctx.from?.id;
+      if (!userId) {
+        return ctx.reply("Sorry, couldn't identify your user account.");
+      }
+
+      // Get the photo with highest resolution
+      const photoArray = ctx.message.photo;
+      const photo = photoArray[photoArray.length - 1];
+
+      // Get file info to download the photo
+      const fileInfo = await ctx.telegram.getFile(photo.file_id);
+      const fileUrl = `https://api.telegram.org/file/bot${process.env.TELEGRAM_BOT_TOKEN}/${fileInfo.file_path}`;
+
+      // Send photo to our API for calorie analysis
+      await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/api/get-calories-from-photo`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            message: {
+              chat: { id: ctx.chat.id },
+              from: { id: userId },
+              photo: photo,
+              fileUrl: fileUrl,
+            },
+          }),
+        }
       );
     } catch (error) {
       console.error("Error processing photo:", error);

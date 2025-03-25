@@ -1,24 +1,21 @@
 // File: /api/telegram-webhook.ts
 import type { NextApiRequest, NextApiResponse } from "next";
 
-export default async function handler(
-  req: NextApiRequest,
-  res: NextApiResponse
-) {
+export async function POST(req: NextApiRequest) {
   (async () => {
     try {
       // Parse the incoming Telegram update from the webhook
       const update = req.body;
-
       // Check if the update contains a message with a chat id
       if (update && update.message && update.message.chat) {
+        console.log("Update contains a message with a chat id");
         const chatId = update.message.chat.id;
 
         // Prepare the reply message text
         const replyText = "Hello from the background task!";
 
         // Get your bot token from environment variables
-        const BOT_TOKEN = process.env.BOT_TOKEN;
+        const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
         if (!BOT_TOKEN) {
           throw new Error("BOT_TOKEN is not set in environment variables.");
         }
@@ -43,5 +40,5 @@ export default async function handler(
   })();
 
   // Immediately return a 204 No Content response to acknowledge the webhook
-  res.status(204).end();
+  return new Response(null, { status: 204 });
 }
