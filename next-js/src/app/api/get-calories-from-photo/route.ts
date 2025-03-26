@@ -1,5 +1,5 @@
 // File: /api/telegram-webhook.ts
-import type { NextApiRequest, NextApiResponse } from "next";
+import type { NextApiRequest } from "next";
 
 export async function POST(req: NextApiRequest) {
   (async () => {
