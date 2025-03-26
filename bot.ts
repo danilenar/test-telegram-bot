@@ -82,8 +82,18 @@ bot.start((ctx) => {
       lastCommand: "start",
     };
 
-    ctx.reply(
-      "Welcome to Calories.fun! To get started, please provide your Zetachain wallet address (starting with 0x):"
+    ctx.replyWithPhoto(
+      { source: "./assets/logo.jpg" }, // Path to your app screenshot
+      {
+        caption: `Burn Calories Mine Tokens
+calories.fun is the first memecoin on zetachain that you can mine by burning calroeis`,
+        reply_markup: {
+          inline_keyboard: [
+            [{ text: "Mine now", callback_data: "start" }],
+            [{ text: "Website", url: "google.com" }],
+          ],
+        },
+      }
     );
   }
 });
@@ -213,45 +223,6 @@ bot.on(message("photo"), async (ctx) => {
   // Check if the message contains a photo
   if ("photo" in ctx.message) {
     try {
-      /* const userId = ctx.from?.id;
-      if (!userId) {
-        return ctx.reply("Sorry, couldn't identify your user account.");
-      }
-
-      console.log("Received photo from user:", userId);
-
-      // Check if we were expecting a photo from this user
-      const session = userSessions[userId];
-      if (!session || !session.awaitingPhoto) {
-        return ctx.reply(
-          "To analyze a meal photo, please use the /submit command first."
-        );
-      }
-
-      // Reset user state
-      userSessions[userId].awaitingPhoto = false;
-
-      // Rest of your photo handling code
-      const photoArray = ctx.message.photo;
-      if (!photoArray || photoArray.length === 0) {
-        return ctx.reply(
-          "Sorry, we couldn't process your photo. Please try again with /submit."
-        );
-      }
-
-      // Pick the photo with the highest resolution
-      const photo = photoArray[photoArray.length - 1];
-
-      // Acknowledge receipt immediately
-      await ctx.reply("Photo received! Analyzing your meal...");
-
-      // Simulate calorie evaluation (in a real scenario, integrate with an AI service)
-      const calorieCount = simulateCalorieAnalysis(photo.file_id);
-
-      // Send the result after "analysis"
-      ctx.reply(
-        `Our AI estimates that your meal has about ${calorieCount} calories. Tokens will be rewarded accordingly!`
-      ); */
       const userId = ctx.from?.id;
       if (!userId) {
         return ctx.reply("Sorry, couldn't identify your user account.");
